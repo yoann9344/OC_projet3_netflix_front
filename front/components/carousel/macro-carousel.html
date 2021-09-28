@@ -1,0 +1,19 @@
+<div id="externalWrapper">
+  <div id="slidesWrapper">
+    <slot id="slidesSlot">
+      <p class="slidesFallback">No content available</p>
+    </slot>
+  </div>
+</div>
+
+<div id="navigation">
+  <slot id="navigationSlot" name="navigationSlot"></slot>
+</div>
+
+<div id="pagination">
+  <slot id="paginationSlot" name="paginationSlot"></slot>
+</div>
+
+<div id="aria-live">
+  <slot id="ariaSlot" name="ariaSlot"></slot>
+</div>

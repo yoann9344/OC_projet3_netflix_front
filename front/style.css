@@ -1,0 +1,29 @@
+@import url("https://fonts.googleapis.com/css2?family=Heebo:wght@800&display=swap");
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+:root {
+  --movie-width: 293px;
+  --movie-height: 200px;
+  --arrow-width: 50px;
+  --slider-py: 50px;
+}
+@media only screen and (max-width: 1000px) {
+  :root {
+    --movie-width: 25vw;
+  }
+}
+html {
+  box-sizing: border-box;
+}
+
+body {
+  box-sizing: inherit;
+  margin: 0;
+}
+
+.d-none {
+  display: none;
+}
