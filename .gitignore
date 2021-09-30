@@ -132,7 +132,7 @@ dmypy.json
 Session*.vim
 
 # nodes stuffs
-nodes_modules/
+**/nodes_modules/
 yarn.lock
 package.json
 .DS_Store
