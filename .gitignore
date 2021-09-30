@@ -130,3 +130,9 @@ dmypy.json
 
 # Vim session
 Session*.vim
+
+# nodes stuffs
+nodes_modules/
+yarn.lock
+package.json
+.DS_Store

@@ -1,11 +1,15 @@
 import html_component from './flix-carousel.html'
 import styles from './flix-carousel.css'
-import { html_to_element, css_to_element } from '../utils/template.js'
+import { html_to_element, css_to_element } from '../../utils/template.js'
 
 export class FlixCarousel extends HTMLElement {
-  connectedCallback () {
+  async connectedCallback () {
     this.genre = this.getAttribute('data-genre')
     const nb_movies = this.getAttribute('data-nb-movies')
+    let offset = this.getAttribute('data-offset')
+    if (!offset) {
+      offset = 0
+    }
 
     const html = html_to_element(html_component)
     this.init_template(html)
@@ -17,26 +21,43 @@ export class FlixCarousel extends HTMLElement {
     this.button_right = this.shadow.getElementById('button-right')
     this.indicators = [...this.shadow.getElementById('indicators').children]
 
-    console.log(this.indicators)
+    // console.log(this.indicators)
     this.index = 0
+    this.movies = []
 
     this.button_left.addEventListener('click', (e) => this.move_to_left(e), false)
     this.button_right.addEventListener('click', (e) => this.move_to_right(e), false)
-    this.movies = [
+    const gifs = [
       './img/loading.gif',
       './img/loading.gif',
       './img/loading.gif',
       './img/loading.gif'
     ]
-    this.create_images()
+    this.create_images(gifs)
 
-    this.retrieve_movies().then((movies) => {
-      this.movies_info = movies
-      this.movies = movies.map((m) => m.image_url).slice(0, nb_movies)
-      this.nb_pages = Math.floor(this.movies.length / 4)
-      this.slider.replaceChildren()
-      this.create_images()
-    })
+    // load page by page, to replace the gifs as fast as possible
+    const movies = await this.retrieve_page(1)
+    this.movies_info = movies
+    const movies_to_add = movies.map((m) => m.image_url).slice(offset, nb_movies + offset)
+    this.slider.replaceChildren() // replace loading gifs
+    this.create_images(movies_to_add)
+    this.movies.push(...movies_to_add)
+    this.nb_pages = 2
+    console.log('LOADED')
+
+    // load the next pages if required by data-nb-movies
+    let missing_movies = nb_movies - this.movies.length
+    while (missing_movies > 0) {
+      const movies = await this.retrieve_page(this.nb_pages)
+      this.movies_info.push(...movies)
+      const movies_to_add = movies.map((m) => m.image_url).slice(0, missing_movies)
+      this.create_images(movies_to_add)
+      this.movies.push(...movies_to_add)
+      console.log(`PAGE ${this.nb_pages} LOADED`)
+      this.nb_pages += 1
+      missing_movies = nb_movies - this.movies.length
+    }
+    this.nb_slides = Math.floor(this.movies.length / 4)
   }
 
   async retrieve_page (page) {
@@ -49,16 +70,7 @@ export class FlixCarousel extends HTMLElement {
     if (!response.ok) {
       throw new Error('HTTP error, status = ' + response.status)
     }
-    return await response.json()
-  }
-
-  async retrieve_movies () {
-    const json_1 = await this.retrieve_page(1)
-    const json_2 = await this.retrieve_page(2)
-    const result = json_1.results.concat(json_2.results)
-    console.log(json_1, json_2, 'result :', result)
-    console.log(result[0])
-    return result
+    return (await response.json()).results
   }
 
   show_modal (event) {
@@ -108,26 +120,27 @@ export class FlixCarousel extends HTMLElement {
 
   init_template (html) {
     const nodes = this.children
-    console.log(html)
+    // console.log(html)
     if (nodes.length > 1) {
       throw Error('FlixCarousel can have only one sub element.')
     } else if (nodes.length == 1) {
       this.template = nodes[0]
-      console.log('Nodes Z')
+      // console.log('Nodes Z')
     } else {
       this.template = html.getElementsByTagName('template')[0].content.firstElementChild
-      console.log('Template', this.template)
+      // console.log('Template', this.template)
     }
   }
 
-  create_images () {
+  create_images (movies) {
     this.images = []
-    this.movies.forEach((image_src, index) => {
+    const start_index = this.movies.length
+    movies.forEach((image_src, index) => {
     // Clone the initial movie thats included in the html, then replace the image with a different one
       // const clone = this.template.cloneNode(true)
-      // const image = clone.querySelector('img')
+      // const image = clone.querySelector('img-modal')  // WIP open_modal on click
       const image = document.createElement('img')
-      image.setAttribute('data-index', index)
+      image.setAttribute('data-index', start_index + index)
       if (!image) {
         throw Error('FliwCarousel : Template must contain a tag img.')
       }
@@ -138,7 +151,8 @@ export class FlixCarousel extends HTMLElement {
       this.images.push(image)
 
       const slider = this.slider
-      slider.insertBefore(image, slider.childNodes[slider.childNodes.length - 1])
+      slider.appendChild(image)
+      // slider.insertBefore(image, slider.childNodes[slider.childNodes.length - 1])
       // slider.insertBefore(clone, slider.childNodes[slider.childNodes.length - 1])
     })
   }
@@ -159,14 +173,14 @@ export class FlixCarousel extends HTMLElement {
       indicator.classList.remove('active')
     })
     const newActiveIndicator = this.indicators[this.index]
-    console.log(this.indicators)
-    console.log(newActiveIndicator)
+    // console.log(this.indicators)
+    // console.log(newActiveIndicator)
     newActiveIndicator.classList.add('active')
   }
 
   move_to_left (e) {
     const movie_width = this.shadow.querySelector('.movie').getBoundingClientRect().width
-    const scroll_distance = movie_width * 4 // Scroll the length of 6 movies. TODO: make work for mobile because (4 movies/page instead of 6)
+    const scroll_distance = movie_width * 4
 
     if (this.index > 0) {
       this.slider.scrollBy({
@@ -182,12 +196,12 @@ export class FlixCarousel extends HTMLElement {
   move_to_right (e) {
     // console.log('this', this)
     const movie_width = this.shadow.querySelector('.movie').getBoundingClientRect().width
-    const scroll_distance = movie_width * 4 // Scroll the length of 6 movies. TODO: make work for mobile because (4 movies/page instead of 6)
+    const scroll_distance = movie_width * 4
 
     // console.log(`movie_width = ${movie_width}`)
     // console.log(`scrolling right ${scroll_distance}`)
 
-    if (this.index == this.nb_pages) {
+    if (this.index == this.nb_slides) {
       this.slider.scrollTo({
         top: 0,
         left: 0,
