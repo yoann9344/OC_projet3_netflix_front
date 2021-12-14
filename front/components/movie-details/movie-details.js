@@ -28,8 +28,11 @@ export class MovieDetails extends HTMLElement {
     const image = this.shadow.getElementById('image_url')
     image.src = this.info.image_url
     this.shadow.getElementById('close_modal').addEventListener('click', (e) => this.hide_modal(e), false)
-    this.modal.getElem
-    image.style = `margin-top: ${image.height}px;`
+    const modal = this.shadow.getElementById('modal')
+    if (image.y < 0) {
+      const margin = modal.getBoundingClientRect().top - image.getBoundingClientRect().top + image.height + 10
+      image.style = `margin-top: ${margin}px;`
+    }
   }
 
   hide_modal (event) {
